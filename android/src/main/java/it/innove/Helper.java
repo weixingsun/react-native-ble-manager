@@ -3,8 +3,11 @@ package it.innove;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import org.json.JSONArray;
+import android.util.*;
 
 public class Helper {
+
+        public SparseArray<String> official_vendors = new SparseArray<String>();
 
 	public static JSONArray decodeProperties(BluetoothGattCharacteristic characteristic) {
 

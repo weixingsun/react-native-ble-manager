@@ -5,14 +5,14 @@
   "main": "BleManager",
   "repository": {
     "type": "git",
-    "url": "https://github.com/innoveit/react-native-ble-manager.git"
+    "url": "https://github.com/weixingsun/react-native-ble-manager.git"
   },
   "bugs": {
-    "url": "https://github.com/innoveit/react-native-ble-manager/issues"
+    "url": "https://github.com/weixingsun/react-native-ble-manager/issues"
   },
   "keywords": [
-  	"react-native",
-  	"android",
+    "react-native",
+    "android",
     "ios",
     "ble",
     "bluetooth",
@@ -20,7 +20,7 @@
   ],
   "license": "Apache-2.0",
   "author": {
-    "name": "Innove",
-    "url": "https://github.com/innoveit"
+    "name": "Weixing Sun",
+    "url": "https://github.com/weixingsun"
   }
 }

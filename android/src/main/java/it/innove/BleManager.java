@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.*;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -31,7 +32,7 @@ class BleManager extends ReactContextBaseJavaModule {
 	private BluetoothAdapter bluetoothAdapter;
 	private Context context;
 	private ReactContext reactContext;
-
+        private BluetoothLeScanner scanner;
 	// key is the MAC Address
 	private Map<String, Peripheral> peripherals = new LinkedHashMap<>();
 
@@ -39,10 +40,10 @@ class BleManager extends ReactContextBaseJavaModule {
 	public BleManager(ReactApplicationContext reactContext) {
 		super(reactContext);
 		context = reactContext;
+                scanner = getBluetoothAdapter().getBluetoothLeScanner();
 		this.reactContext = reactContext;
 
 		Log.d(LOG_TAG, "BleManager initialized");
-
 
 		IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
 		context.registerReceiver(mReceiver, filter);
@@ -69,7 +70,7 @@ class BleManager extends ReactContextBaseJavaModule {
 	}
 
 	@ReactMethod
-	public void scan(ReadableArray serviceUUIDs, final int scanSeconds, boolean allowDuplicates, Callback successCallback) {
+	public void scan(ReadableArray serviceUUIDs, boolean allowDuplicates, Callback successCallback) {
 		Log.d(LOG_TAG, "scan");
 		if (!getBluetoothAdapter().isEnabled())
 			return;
@@ -89,44 +90,65 @@ class BleManager extends ReactContextBaseJavaModule {
 			}
 			if (Build.VERSION.SDK_INT >= LOLLIPOP) {
 				Log.d(LOG_TAG, "scan con filter");
-				getBluetoothAdapter().startLeScan(services, mLeScanCallback);
+				//getBluetoothAdapter().startLeScan(services, mLeScanCallback);
+                                //ScanSettings.Builder scanSettingsBuilder = new ScanSettings.Builder();
+                                //scanSettingsBuilder.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
+                                //ScanSettings scanSettings = scanSettingsBuilder.build();
+                                scanner.startScan(scanCallback);
 			}else {
 				Log.d(LOG_TAG, "scan senza filter");
-				getBluetoothAdapter().startLeScan(mLeScanCallback);
+				getBluetoothAdapter().startLeScan(services,mLeScanCallback);
 			}
 		} else {
+                    if (Build.VERSION.SDK_INT >= LOLLIPOP) {
+                        //BluetoothLeScanner scanner = getBluetoothAdapter().getBluetoothLeScanner();
+                        //ScanSettings.Builder scanSettingsBuilder = new ScanSettings.Builder();
+                        //scanSettingsBuilder.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
+                        //ScanSettings scanSettings = scanSettingsBuilder.build();
+                        scanner.startScan(scanCallback);
+                    }else {
 			getBluetoothAdapter().startLeScan(mLeScanCallback);
+                    }
 		}
 
-		if (scanSeconds > 0) {
+		/*if (scanSeconds > 0) {
 			Thread thread = new Thread() {
-
 				@Override
 				public void run() {
-
 					try {
 						Thread.sleep(scanSeconds * 1000);
 					} catch (InterruptedException ignored) {
 					}
-
 					runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
-							getBluetoothAdapter().stopLeScan(mLeScanCallback);
+							if (Build.VERSION.SDK_INT < LOLLIPOP) {
+								getBluetoothAdapter().stopLeScan(mLeScanCallback);
+							}else{
+								scanner.stopScan(scanCallback);
+							}
 							WritableMap map = Arguments.createMap();
 							sendEvent("BleManagerStopScan", map);
 						}
 					});
-
 				}
-
 			};
 			thread.start();
-			}
+		}*/
 
 		successCallback.invoke();
 	}
 
+        @ReactMethod
+        public void stop(){
+            if (Build.VERSION.SDK_INT < LOLLIPOP) {
+                getBluetoothAdapter().stopLeScan(mLeScanCallback);
+            }else{
+                scanner.stopScan(scanCallback);
+            }
+            WritableMap map = Arguments.createMap();
+            sendEvent("BleManagerStopScan", map);
+        }
 
 	@ReactMethod
 	public void connect(String peripheralUUID, Callback successCallback, Callback failCallback) {
@@ -198,45 +220,50 @@ class BleManager extends ReactContextBaseJavaModule {
 			failCallback.invoke();
 	}
 
+	private final ScanCallback scanCallback = new ScanCallback() {
+	    @Override
+            public void onScanResult(int callbackType, ScanResult result) {
+                BluetoothDevice device = result.getDevice();
+                String address = device.getAddress();
+                //if (!peripherals.containsKey(address)) {
+                Peripheral peripheral = new Peripheral(device, result.getRssi(), result.getScanRecord(), reactContext);
+                peripherals.put(device.getAddress(), peripheral);
+                BundleJSONConverter bjc = new BundleJSONConverter();
+                try {
+                    Bundle bundle = bjc.convertToBundle(peripheral.asJSONObject());
+                    WritableMap map = Arguments.fromBundle(bundle);
+                    sendEvent("BleManagerDiscoverPeripheral", map);
+                } catch (JSONException ignored) {}
+                //}
+            }
+	};
 	private BluetoothAdapter.LeScanCallback mLeScanCallback =
-			new BluetoothAdapter.LeScanCallback() {
-
-
-				@Override
-				public void onLeScan(final BluetoothDevice device, final int rssi,
-									 final byte[] scanRecord) {
-					runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							Log.i(LOG_TAG, "DiscoverPeripheral: " + device.getName());
-							String address = device.getAddress();
-
-							if (!peripherals.containsKey(address)) {
-
-								Peripheral peripheral = new Peripheral(device, rssi, scanRecord, reactContext);
-								peripherals.put(device.getAddress(), peripheral);
-
-								BundleJSONConverter bjc = new BundleJSONConverter();
-								try {
-									Bundle bundle = bjc.convertToBundle(peripheral.asJSONObject());
-									WritableMap map = Arguments.fromBundle(bundle);
-									sendEvent("BleManagerDiscoverPeripheral", map);
-								} catch (JSONException ignored) {
-
-								}
-
-
-							} else {
-								// this isn't necessary
-								Peripheral peripheral = peripherals.get(address);
-								peripheral.updateRssi(rssi);
-							}
-						}
-					});
+		new BluetoothAdapter.LeScanCallback() {
+		    @Override
+		    public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
+			runOnUiThread(new Runnable() {
+			    @Override
+			    public void run() {
+				Log.i(LOG_TAG, "DiscoverPeripheral: " + device.getName());
+				String address = device.getAddress();
+				if (!peripherals.containsKey(address)) {
+					Peripheral peripheral = new Peripheral(device, rssi, scanRecord, reactContext);
+					peripherals.put(device.getAddress(), peripheral);
+					BundleJSONConverter bjc = new BundleJSONConverter();
+					try {
+						Bundle bundle = bjc.convertToBundle(peripheral.asJSONObject());
+						WritableMap map = Arguments.fromBundle(bundle);
+						sendEvent("BleManagerDiscoverPeripheral", map);
+					} catch (JSONException ignored) {}
+				} else {
+					// this isn't necessary
+					Peripheral peripheral = peripherals.get(address);
+					peripheral.updateRssi(rssi);
 				}
-
-
-			};
+			    }
+			});
+		    }
+		};
 
 	@ReactMethod
 	public void checkState(){

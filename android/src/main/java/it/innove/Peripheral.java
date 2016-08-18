@@ -2,19 +2,15 @@ package it.innove;
 
 import android.app.Activity;
 import android.bluetooth.*;
+import android.bluetooth.le.*;
+import android.os.*;
 import android.support.annotation.Nullable;
-import android.util.Base64;
-import android.util.Log;
+import android.util.*;
 import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.json.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Peripheral wraps the BluetoothDevice and provides methods to convert to JSON.
@@ -25,6 +21,7 @@ public class Peripheral extends BluetoothGattCallback {
 	public static final String LOG_TAG = "logs";
 
 	private BluetoothDevice device;
+	private ScanRecord scanRecord;
 	private byte[] advertisingData;
 	private int advertisingRSSI;
 	private boolean connected = false;
@@ -40,15 +37,20 @@ public class Peripheral extends BluetoothGattCallback {
 	private Callback writeFailCallback;
 
 	private List<byte[]> writeQueue = new ArrayList<>();
+        private SparseArray<String> official_vendors = new SparseArray<String>();
 
 	public Peripheral(BluetoothDevice device, int advertisingRSSI, byte[] scanRecord, ReactContext reactContext) {
-
 		this.device = device;
 		this.advertisingRSSI = advertisingRSSI;
 		this.advertisingData = scanRecord;
 		this.reactContext = reactContext;
-
 	}
+        public Peripheral(BluetoothDevice device, int advertisingRSSI, ScanRecord scanRecord, ReactContext reactContext) {
+                this.device = device;
+                this.advertisingRSSI = advertisingRSSI;
+                this.scanRecord = scanRecord;
+                this.reactContext = reactContext;
+        }
 
 	private void sendEvent(String eventName, @Nullable WritableMap params) {
 		reactContext
@@ -83,22 +85,72 @@ public class Peripheral extends BluetoothGattCallback {
 	}
 
 	public JSONObject asJSONObject() {
-
 		JSONObject json = new JSONObject();
-
 		try {
 			json.put("name", device.getName());
 			json.put("id", device.getAddress()); // mac address
-			json.put("advertising", byteArrayToJSON(advertisingData));
-			// TODO real RSSI if we have it, else
 			json.put("rssi", advertisingRSSI);
+                    if(this.scanRecord==null){
+			json.put("advertising", byteArrayToJSON(advertisingData));
+                    }else{
+                        json.put("device",scanRecord.getDeviceName());
+                        json.put("ad_flag",scanRecord.getAdvertiseFlags());
+                        json.put("vendor",vendorToJson(scanRecord.getManufacturerSpecificData()));
+                        json.put("services",servicesToJson(scanRecord.getServiceData()));
+                        json.put("tx_power_level",scanRecord.getTxPowerLevel());
+                    }
 		} catch (JSONException e) { // this shouldn't happen
 			e.printStackTrace();
 		}
-
 		return json;
 	}
 
+        private JSONObject servicesToJson(Map<ParcelUuid, byte[]> services){
+                JSONObject json = new JSONObject();
+                try{
+                    for (Map.Entry<ParcelUuid, byte[]> entry : services.entrySet()) {
+                        json.put("uuid", entry.getKey().toString());
+                        json.put("data", bytesToHex(entry.getValue()));
+                    }
+                } catch (Exception e) { // this shouldn't happen
+                        Log.e("BLE.service:>>>>>>>>>>>>>>>",e.getMessage());
+                }
+                return json;
+        }
+        private JSONObject vendorToJson(SparseArray<byte[]> vendor){
+                JSONObject json = new JSONObject();
+                try{
+                    for(int i = 0; i < vendor.size(); i++) {
+                        int key = vendor.keyAt(i);
+                        json.put("id", key);
+                        //json.put("name",official_vendors.get(key));
+                        json.put("data", bytesToHex(vendor.get(key)));
+                    }
+                } catch (Exception e) { // this shouldn't happen
+                        Log.e("BLE.service:>>>>>>>>>>>>>>>",e.getMessage());
+                }
+                return json;
+        }
+
+        private String arrayToDecimalString(byte[] array){
+                StringBuffer sb = new StringBuffer("[");
+                for(int i = 0; i < array.length; i++) {
+                    sb.append((int)array[i]+",");
+                }
+                sb.deleteCharAt(sb.length()-1);
+                return sb.toString();
+        }
+        private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
+        public static String bytesToHex(byte[] bytes) {
+                char[] hexChars = new char[bytes.length * 2];
+                for (int j = 0; j < bytes.length; j++) {
+                        int v = bytes[j] & 0xFF;
+                        hexChars[j * 2] = hexArray[v >>> 4];
+                        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+                }
+                return new String(hexChars);
+        }
 	public JSONObject asJSONObject(BluetoothGatt gatt) {
 
 		JSONObject json = asJSONObject();
