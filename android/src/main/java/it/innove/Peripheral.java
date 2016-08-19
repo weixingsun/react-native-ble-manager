@@ -95,7 +95,7 @@ public class Peripheral extends BluetoothGattCallback {
                     }else{
                         json.put("device",scanRecord.getDeviceName());
                         json.put("ad_flag",scanRecord.getAdvertiseFlags());
-                        json.put("vendor",vendorToJson(scanRecord.getManufacturerSpecificData()));
+                        json.put("mfg",vendorToJson(scanRecord.getManufacturerSpecificData()));
                         json.put("services",servicesToJson(scanRecord.getServiceData()));
                         json.put("tx_power_level",scanRecord.getTxPowerLevel());
                     }
