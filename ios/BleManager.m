@@ -227,7 +227,7 @@ RCT_EXPORT_METHOD(stop)
     [peripherals addObject:peripheral];
     [peripheral setAdvertisementData:advertisementData RSSI:RSSI];
     
-    NSLog(@"Discover peripheral: %@", [peripheral name]);
+    //NSLog(@"Discover peripheral: %@", [peripheral name]);
     [self.bridge.eventDispatcher sendAppEventWithName:@"BleManagerDiscoverPeripheral" body:[peripheral asDictionary]];
     
 }

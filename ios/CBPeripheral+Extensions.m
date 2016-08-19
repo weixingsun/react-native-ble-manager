@@ -73,11 +73,23 @@ static char ADVERTISEMENT_RSSI_IDENTIFER;
       }
       NSDictionary *mfg = [advertising objectForKey:CBAdvertisementDataManufacturerDataKey];
       if (mfg) {
-          NSMutableDictionary *vendor = [[NSMutableDictionary alloc] init];
+          NSMutableDictionary *mfg_dict = [[NSMutableDictionary alloc] init];
           if([mfg objectForKey:@"data"]){
-              [vendor setValue:[mfg objectForKey:@"data"] forKey:@"data"];
+              NSString *rawMfg = [mfg objectForKey:@"data"];
+              //NSLog(@"mfg: %@ ", rawMfg);
+              NSString *mfgStringRevId = [rawMfg substringToIndex:4];  //0xE000 -> 00E0
+              NSString *mfg1 = [mfgStringRevId substringWithRange:NSMakeRange(2, 2)];
+              NSString *mfg2 = [mfgStringRevId substringToIndex:2];
+              NSString *mfgStringId = [NSString stringWithFormat:@"%@%@", mfg1, mfg2];
+              //NSLog(@"mfg_id: %@ ", mfgStringId);
+              unsigned mfgid = 0;
+              [[NSScanner scannerWithString:mfgStringId] scanHexInt:&mfgid];
+              NSString *data = [rawMfg substringWithRange:NSMakeRange(4, [rawMfg length]-4)];
+              NSLog(@"mfg_id: %@ data: %@", mfgStringId,data);
+              [mfg_dict setValue:data forKey:@"data"];
+              [mfg_dict setValue:[NSNumber numberWithInt:mfgid] forKey:@"id"];
           }
-          [dictionary setObject:vendor forKey: @"vendor"];
+          [dictionary setObject:mfg_dict forKey: @"mfg"];
       }
       NSDictionary *serviceUUIDs = [advertising objectForKey:CBAdvertisementDataServiceUUIDsKey];
       NSDictionary *serviceData  = [advertising objectForKey:CBAdvertisementDataServiceDataKey];
@@ -90,7 +102,7 @@ static char ADVERTISEMENT_RSSI_IDENTIFER;
           }
           [dictionary setObject:services forKey: @"services"];
       }
-      //[dictionary setObject: [self advertising] forKey: @"advertising"];
+      [dictionary setObject: [self advertising] forKey: @"advertising"];
   }
   
   if([[self services] count] > 0) {
@@ -143,7 +155,7 @@ static char ADVERTISEMENT_RSSI_IDENTIFER;
   // Convert to String keys with Array Buffer values
   NSMutableDictionary *serviceData = [dict objectForKey:CBAdvertisementDataServiceDataKey];
   if (serviceData) {
-    NSLog(@"%@", serviceData);
+    //NSLog(@"%@", serviceData);
     
     for(CBUUID *key in serviceData) {
       [serviceData setObject:dataToArrayBuffer([serviceData objectForKey:key]) forKey:[key UUIDString]];
