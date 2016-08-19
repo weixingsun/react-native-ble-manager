@@ -109,7 +109,7 @@ public class Peripheral extends BluetoothGattCallback {
                 JSONObject json = new JSONObject();
                 try{
                     for (Map.Entry<ParcelUuid, byte[]> entry : services.entrySet()) {
-                        json.put("uuid", entry.getKey().toString());
+                        json.put("uuid", entry.getKey().getUuid().toString());
                         json.put("data", bytesToHex(entry.getValue()));
                     }
                 } catch (Exception e) { // this shouldn't happen

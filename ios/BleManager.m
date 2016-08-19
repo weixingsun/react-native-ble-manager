@@ -188,9 +188,10 @@ RCT_EXPORT_MODULE();
 }
 
 
-RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
+//RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
+RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
 {
-    NSLog(@"scan with timeout %@", timeoutSeconds);
+    //NSLog(@"scan with timeout %@", timeoutSeconds);
     NSArray * services = [RCTConvert NSArray:serviceUUIDStrings];
     NSMutableArray *serviceUUIDs = [NSMutableArray new];
     NSDictionary *options = nil;
@@ -204,16 +205,19 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSN
     }
     [manager scanForPeripheralsWithServices:serviceUUIDs options:options];
     
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [NSTimer scheduledTimerWithTimeInterval:[timeoutSeconds floatValue] target:self selector:@selector(stopScanTimer:) userInfo: nil repeats:NO];
-    });
+    //dispatch_async(dispatch_get_main_queue(), ^{
+    //    [NSTimer scheduledTimerWithTimeInterval:[timeoutSeconds floatValue] target:self selector:@selector(stopScanTimer:) userInfo: nil repeats:NO];
+    //});
     successCallback(@[]);
 }
 
--(void)stopScanTimer:(NSTimer *)timer {
+//-(void)stopScanTimer:(NSTimer *)timer {
+RCT_EXPORT_METHOD(stop)
+{
     NSLog(@"Stop scan");
     [manager stopScan];
     [self.bridge.eventDispatcher sendAppEventWithName:@"BleManagerStopScan" body:@{}];
+    //successCallback(@[]);
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral

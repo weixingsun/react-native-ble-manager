@@ -3,6 +3,31 @@
 static char ADVERTISING_IDENTIFER;
 static char ADVERTISEMENT_RSSI_IDENTIFER;
 
+@implementation NSData (NSData_Conversion)
+
+#pragma mark - String Conversion
+- (NSString *)hexadecimalString
+{
+    /* Returns hexadecimal string of NSData. Empty string if data is empty.   */
+
+    const unsigned char *dataBuffer = (const unsigned char *)[self bytes];
+
+    if (!dataBuffer)
+    {
+        return [NSString string];
+    }
+
+    NSUInteger          dataLength  = [self length];
+    NSMutableString     *hexString  = [NSMutableString stringWithCapacity:(dataLength * 2)];
+
+    for (int i = 0; i < dataLength; ++i)
+    {
+        [hexString appendFormat:@"%02x", (unsigned int)dataBuffer[i]];
+    }
+
+    return [NSString stringWithString:hexString];
+}
+@end
 @implementation CBPeripheral(com_megster_ble_extension)
 
 -(NSString *)uuidAsString {
@@ -15,8 +40,10 @@ static char ADVERTISEMENT_RSSI_IDENTIFER;
 
 
 -(NSDictionary *)asDictionary {
+  //NSLog(@"%@", [self class]);
   NSString *uuidString = NULL;
   if (self.identifier.UUIDString) {
+    //NSLog(@"%@", self.identifier);
     uuidString = self.identifier.UUIDString;
   } else {
     uuidString = @"";
@@ -29,15 +56,41 @@ static char ADVERTISEMENT_RSSI_IDENTIFER;
     [dictionary setObject: [self name] forKey: @"name"];
   }
   
-  /*
+  
   if ([self RSSI]) {
     [dictionary setObject: [self RSSI] forKey: @"rssi"];
   } else if ([self advertisementRSSI]) {
     [dictionary setObject: [self advertisementRSSI] forKey: @"rssi"];
-  }*/
+  }
   
   if ([self advertising]) {
-    [dictionary setObject: [self advertising] forKey: @"advertising"];
+      NSDictionary *advertising = [self advertising];
+      if ([advertising objectForKey:@"kCBAdvDataIsConnectable"]) {
+          [dictionary setObject: [advertising objectForKey:@"kCBAdvDataIsConnectable"] forKey: @"connectable"];
+      }
+      if ([advertising objectForKey:@"kCBAdvDataTxPowerLevel"]) {
+          [dictionary setObject: [advertising objectForKey:@"kCBAdvDataTxPowerLevel"] forKey: @"tx_power_level"];
+      }
+      NSDictionary *mfg = [advertising objectForKey:CBAdvertisementDataManufacturerDataKey];
+      if (mfg) {
+          NSMutableDictionary *vendor = [[NSMutableDictionary alloc] init];
+          if([mfg objectForKey:@"data"]){
+              [vendor setValue:[mfg objectForKey:@"data"] forKey:@"data"];
+          }
+          [dictionary setObject:vendor forKey: @"vendor"];
+      }
+      NSDictionary *serviceUUIDs = [advertising objectForKey:CBAdvertisementDataServiceUUIDsKey];
+      NSDictionary *serviceData  = [advertising objectForKey:CBAdvertisementDataServiceDataKey];
+      if (serviceUUIDs && serviceData){
+          NSMutableDictionary *services = [[NSMutableDictionary alloc] init];
+          for(CBUUID *key in serviceData) {
+              NSDictionary *rawData = [serviceData objectForKey:key];
+              [services setValue:key forKey:@"uuid"];
+              [services setValue:[rawData objectForKey:@"data"] forKey:@"data"];
+          }
+          [dictionary setObject:services forKey: @"services"];
+      }
+      //[dictionary setObject: [self advertising] forKey: @"advertising"];
   }
   
   if([[self services] count] > 0) {
@@ -69,6 +122,7 @@ static char ADVERTISEMENT_RSSI_IDENTIFER;
 //     kCBAdvDataManufacturerData = {
 //         CDVType = ArrayBuffer;
 //         data = "AABoZWxsbw==";
+//         data = "0000BEAC010203040506070809";
 //     };
 //     kCBAdvDataServiceData = {
 //         FED8 = {
@@ -240,7 +294,8 @@ id dataToArrayBuffer(NSData* data)
 {
   return @{
            @"CDVType" : @"ArrayBuffer",
-           @"data" :[data base64EncodedStringWithOptions:0]
+           //@"data" :[data base64EncodedStringWithOptions:0]
+           @"data" :[data hexadecimalString]
            };
 }
 
