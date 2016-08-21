@@ -82,6 +82,16 @@ class BleManager  {
   stop(){
      bleManager.stop();
   }
+  
+  broadcast(id,data){
+    return new Promise((fulfill, reject) => {
+      bleManager.broadcast(id,data, (success) => {
+        fulfill();
+      }, (fail) => {
+        reject(fail);
+      });
+    });
+  }
 
 }
 

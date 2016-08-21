@@ -1,16 +1,12 @@
 package it.innove;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothManager;
+import android.bluetooth.*;
 import android.bluetooth.le.*;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Build;
-import android.os.Bundle;
+import android.os.*;
 import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.util.Log;
@@ -19,6 +15,7 @@ import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
 import org.json.JSONException;
 
 import java.util.*;
+import java.nio.charset.*;
 
 import static android.os.Build.VERSION_CODES.LOLLIPOP;
 import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
@@ -33,6 +30,8 @@ class BleManager extends ReactContextBaseJavaModule {
 	private Context context;
 	private ReactContext reactContext;
         private BluetoothLeScanner scanner;
+        private BluetoothLeAdvertiser advertiser;
+        private AdvertiseSettings advSettings;
 	// key is the MAC Address
 	private Map<String, Peripheral> peripherals = new LinkedHashMap<>();
 
@@ -41,12 +40,20 @@ class BleManager extends ReactContextBaseJavaModule {
 		super(reactContext);
 		context = reactContext;
                 scanner = getBluetoothAdapter().getBluetoothLeScanner();
+                advertiser = BluetoothAdapter.getDefaultAdapter().getBluetoothLeAdvertiser();
+                //advertiser = getBluetoothAdapter().getBluetoothLeAdvertiser();
+                Log.e(LOG_TAG, "BLE.isMultipleAdvertisementSupported:"+BluetoothAdapter.getDefaultAdapter().isMultipleAdvertisementSupported());
 		this.reactContext = reactContext;
 
 		Log.d(LOG_TAG, "BleManager initialized");
 
 		IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
 		context.registerReceiver(mReceiver, filter);
+                advSettings = new AdvertiseSettings.Builder()
+                  .setAdvertiseMode( AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY )
+                  .setTxPowerLevel( AdvertiseSettings.ADVERTISE_TX_POWER_HIGH )
+                  .setConnectable( false )
+                  .build();
 	}
 
 	@Override
@@ -69,6 +76,33 @@ class BleManager extends ReactContextBaseJavaModule {
 				.emit(eventName, params);
 	}
 
+	@ReactMethod
+	public void broadcast(String id, String data, Callback successCallback, Callback failCallback) {
+            boolean support = BluetoothAdapter.getDefaultAdapter().isMultipleAdvertisementSupported();
+            if(!support){
+                failCallback.invoke();
+            }else{
+                ParcelUuid pUuid = new ParcelUuid( UUID.fromString( id ) );
+                AdvertiseData advData = new AdvertiseData.Builder()
+                  .setIncludeDeviceName( true )
+                  .addServiceUuid( pUuid )
+                  .addServiceData( pUuid, data.getBytes( Charset.forName( "UTF-8" ) ) )
+                  .build();
+                AdvertiseCallback advertisingCallback = new AdvertiseCallback() {
+                  @Override
+                  public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+                    super.onStartSuccess(settingsInEffect);
+                  }
+                  @Override
+                  public void onStartFailure(int errorCode) {
+                    Log.e( "BLE", "Advertising onStartFailure: " + errorCode );
+                    super.onStartFailure(errorCode);
+                  }
+                };
+                advertiser.startAdvertising( advSettings, advData, advertisingCallback );
+                successCallback.invoke();
+            }
+        }
 	@ReactMethod
 	public void scan(ReadableArray serviceUUIDs, boolean allowDuplicates, Callback successCallback) {
 		Log.d(LOG_TAG, "scan");

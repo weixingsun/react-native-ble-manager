@@ -15,6 +15,8 @@
 
 @property (strong, nonatomic) NSMutableSet *peripherals;
 @property (strong, nonatomic) CBCentralManager *manager;
+@property (strong, nonatomic) CBPeripheralManager *peripheralManager;
+@property (strong, nonatomic) NSString *broadcastUuid;
 
 
 @end

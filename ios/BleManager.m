@@ -17,13 +17,23 @@ RCT_EXPORT_MODULE();
 @synthesize manager;
 @synthesize peripherals;
 
+@synthesize peripheralManager;
+  CBMutableCharacteristic *characteristic;
+  CBMutableCharacteristic *characteristic1;
+  CBMutableCharacteristic *characteristic2;
+  CBMutableService *servicea;
+  NSData *mainData;
+  NSString *range;
+  //NSString *broadcastUuid;
+
 - (instancetype)init
 {
     
     if (self = [super init]) {
         NSLog(@"BleManager initialized");
         peripherals = [NSMutableSet set];
-        manager = [[CBCentralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
+        manager = [[CBCentralManager   alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
+        peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
         
         connectCallbacks = [NSMutableDictionary new];
         connectCallbackLatches = [NSMutableDictionary new];
@@ -187,7 +197,127 @@ RCT_EXPORT_MODULE();
         return 0;
 }
 
+RCT_EXPORT_METHOD(broadcast:(NSString *)uuid data:(NSString *)data callback:(nonnull RCTResponseSenderBlock)successCallback failCallback:(nonnull RCTResponseSenderBlock)failCallback)
+{
+    //NSLog(@"broadcast id:%@ :data:", broadcastUuid,data);
+    //[self setBroadcastUuid:uuid];
+    NSDictionary *advertisingData = @{CBAdvertisementDataServiceUUIDsKey : @[[CBUUID UUIDWithString:[self broadcastUuid]]]};
+    [peripheralManager startAdvertising:advertisingData];
+    successCallback(@[]);
+}
+- (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheral{
+    NSLog(@"peripheralManagerDidUpdateState");
+    switch (peripheral.state) {
+        case CBPeripheralManagerStatePoweredOn:{
+            CBUUID *cUDID = [CBUUID UUIDWithString:@"DA18"];
+            CBUUID *cUDID1 = [CBUUID UUIDWithString:@"DA17"];
+            CBUUID *cUDID2 = [CBUUID UUIDWithString:@"DA16"];
+            NSString *broadcastUuid = [[NSUUID UUID] UUIDString];
+            [self setBroadcastUuid:broadcastUuid];
+            CBUUID *sUDID = [CBUUID UUIDWithString:[self broadcastUuid]];
+            characteristic = [[CBMutableCharacteristic alloc]initWithType:cUDID properties:CBCharacteristicPropertyNotify value:nil permissions:CBAttributePermissionsReadable];
+            characteristic1 = [[CBMutableCharacteristic alloc]initWithType:cUDID1 properties:CBCharacteristicPropertyWrite value:nil permissions:CBAttributePermissionsWriteable];
+            characteristic2 = [[CBMutableCharacteristic alloc]initWithType:cUDID2 properties:CBCharacteristicPropertyRead value:nil permissions:CBAttributePermissionsReadable];
+            //NSLog(@"%u",characteristic2.properties);
+            servicea = [[CBMutableService alloc]initWithType:sUDID primary:YES];
+            servicea.characteristics = @[characteristic,characteristic1,characteristic2];
+            [peripheral addService:servicea];
+        }
+            break;
+            
+        default:
+            NSLog(@"%i",peripheral.state);
+            break;
+    }
+}
+- (void)peripheralManager:(CBPeripheralManager *)peripheral didAddService:(CBService *)service error:(NSError *)error{
+    NSLog(@"Added");
+    NSDictionary *advertisingData = @{CBAdvertisementDataLocalNameKey : [[UIDevice currentDevice] name], CBAdvertisementDataServiceUUIDsKey : @[[CBUUID UUIDWithString:[self broadcastUuid]]]};
 
+    [peripheral startAdvertising:advertisingData];
+}
+
+- (void)peripheralManagerDidStartAdvertising:(CBPeripheralManager *)peripheral error:(NSError *)error{
+    NSLog(@"peripheralManagerDidStartAdvertising");
+}
+
+- (void)peripheralManager:(CBPeripheralManager *)peripheral central:(CBCentral *)central didSubscribeToCharacteristic:(CBCharacteristic *)characteristic12{
+    NSLog(@"Connected Core:%@",characteristic12.UUID);
+    [self writeData:peripheral];
+}
+
+- (void)writeData:(CBPeripheralManager *)peripheral{
+    NSDictionary *dict = @{ @"NAME" : @"Weixing Sun",@"EMAIL":@"weixing.sun@gmail.com" };
+    mainData = [NSJSONSerialization dataWithJSONObject:dict options:kNilOptions error:nil];
+    while ([self hasData]) {
+        if([peripheral updateValue:[self getNextData] forCharacteristic:characteristic onSubscribedCentrals:nil]){
+            [self ridData];
+        }else{
+            return;
+        }
+    }
+    NSString *stra = @"ENDAL";
+    NSData *dataa = [stra dataUsingEncoding:NSUTF8StringEncoding];
+    [peripheral updateValue:dataa forCharacteristic:characteristic onSubscribedCentrals:nil];
+}
+- (void)peripheralManagerIsReadyToUpdateSubscribers:(CBPeripheralManager *)peripheral{
+    while ([self hasData]) {
+        if([peripheral updateValue:[self getNextData] forCharacteristic:characteristic onSubscribedCentrals:nil]){
+            [self ridData];
+        }else{
+            return;
+        }
+    }
+    NSString *stra = @"ENDAL";
+    NSData *dataa = [stra dataUsingEncoding:NSUTF8StringEncoding];
+    [peripheral updateValue:dataa forCharacteristic:characteristic onSubscribedCentrals:nil];
+}
+- (BOOL)hasData{
+    if ([mainData length]>0) {
+        return YES;
+    }else{
+        return NO;
+    }
+}
+
+- (void)ridData{
+    if ([mainData length]>19) {
+        mainData = [mainData subdataWithRange:NSRangeFromString(range)];
+    }else{
+        mainData = nil;
+    }
+}
+
+- (NSData *)getNextData
+{
+    NSData *data;
+    if ([mainData length]>19) {
+        int datarest = [mainData length]-20;
+        data = [mainData subdataWithRange:NSRangeFromString(@"{0,20}")];
+        range = [NSString stringWithFormat:@"{20,%i}",datarest];
+    }else{
+        int datarest = [mainData length];
+        range = [NSString stringWithFormat:@"{0,%i}",datarest];
+        data = [mainData subdataWithRange:NSRangeFromString(range)];
+    }
+    return data;
+}
+- (void)peripheralManager:(CBPeripheralManager *)peripheral didReceiveReadRequest:(CBATTRequest *)request{
+    NSString *mainString = [NSString stringWithFormat:@"GN123"];
+    NSData *cmainData= [mainString dataUsingEncoding:NSUTF8StringEncoding];
+    request.value = cmainData;
+    [peripheral respondToRequest:request withResult:CBATTErrorSuccess];
+}
+
+- (void)peripheralManager:(CBPeripheralManager *)peripheral didReceiveWriteRequests:(NSArray *)requests{
+    for (CBATTRequest *aReq in requests){
+        //NSLog(@"%@",[[NSString alloc]initWithData:aReq.value encoding:NSUTF8StringEncoding]);
+        //Log.text = [Log.text stringByAppendingString:[[NSString alloc]initWithData:aReq.value encoding:NSUTF8StringEncoding]];
+        //Log.text = [Log.text stringByAppendingString:@"\n"];
+        [peripheral respondToRequest:aReq withResult:CBATTErrorSuccess];
+    }
+}
+//////////////////////////////////////////////////////////////////////////////////
 //RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
 RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
 {
