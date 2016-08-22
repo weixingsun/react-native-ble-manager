@@ -93,6 +93,16 @@ class BleManager  {
     });
   }
 
+  isEnabled(){
+    return bleManager.isEnabled()
+  }
+
+  startAdvertisingService(){
+    bleManager.startAdvertisingService();
+  }
+  stopAdvertisingService(){
+    bleManager.stopAdvertisingService();
+  }
 }
 
 module.exports = new BleManager();
