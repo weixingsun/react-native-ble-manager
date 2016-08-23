@@ -73,12 +73,16 @@ class BleManager extends ReactContextBaseJavaModule {
             return new Intent(getReactApplicationContext(), AdvertiserService.class);
         }
         @ReactMethod
-        public boolean isEnabled(){
-            return getBluetoothAdapter().isEnabled();
+        public void isEnabled(Callback successCallback,Callback failCallback){
+            boolean enabled = getBluetoothAdapter().isEnabled();
+            if(enabled) successCallback.invoke(enabled);
+            else failCallback.invoke(enabled);
         }
         @ReactMethod
-        public boolean isAdvertisingSupported(){
-            return getBluetoothAdapter().isMultipleAdvertisementSupported();
+        public void isAdvertisingSupported(Callback successCallback, Callback failCallback){
+            boolean supported = getBluetoothAdapter().isMultipleAdvertisementSupported();
+            if(supported) successCallback.invoke(supported);
+            else failCallback.invoke(supported);
         }
 
 	@ReactMethod

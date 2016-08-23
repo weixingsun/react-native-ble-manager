@@ -94,9 +94,23 @@ class BleManager  {
   }
 
   isEnabled(){
-    return bleManager.isEnabled()
+    return new Promise((fulfill, reject) => {
+      bleManager.isEnabled((success)=>{
+        fulfill(success);
+      },(fail)=>{
+        reject(fail);
+      })
+    })
   }
-
+  isAdvertisingSupported(){
+    return new Promise((fulfill, reject) => {
+      bleManager.isAdvertisingSupported((success)=>{
+        fulfill(success);
+      },(fail)=>{
+        reject(fail);
+      })
+    })
+  }
   startAdvertisingService(){
     bleManager.startAdvertisingService();
   }
