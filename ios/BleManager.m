@@ -5,7 +5,7 @@
 #import "NSData+Conversion.h"
 #import "CBPeripheral+Extensions.h"
 #import "BLECommandContext.h"
-
+#import "STCentralTool.h"
 
 @implementation BleManager
 
@@ -17,15 +17,15 @@ RCT_EXPORT_MODULE();
 @synthesize manager;
 @synthesize peripherals;
 @synthesize state;
-
+@synthesize tool;
 @synthesize peripheralManager;
+
   CBMutableCharacteristic *characteristic;
   CBMutableCharacteristic *characteristic1;
   CBMutableCharacteristic *characteristic2;
   CBMutableService *servicea;
   NSData *mainData;
   NSString *range;
-  //NSString *broadcastUuid;
 
 - (instancetype)init
 {
@@ -35,7 +35,8 @@ RCT_EXPORT_MODULE();
         peripherals = [NSMutableSet set];
         manager = [[CBCentralManager   alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
         peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
-        
+        self.tool = [STCentralTool shareInstence];
+        self.tool.delegate = self;
         connectCallbacks = [NSMutableDictionary new];
         connectCallbackLatches = [NSMutableDictionary new];
         readCallbacks = [NSMutableDictionary new];
@@ -97,9 +98,6 @@ RCT_EXPORT_MODULE();
         [stopNotificationCallbacks removeObjectForKey:key];
     }
 }
-
-
-
 
 - (NSString *) centralManagerStateToString: (int)state
 {
@@ -216,7 +214,19 @@ RCT_EXPORT_METHOD(isAdvertisingSupported: (RCTResponseSenderBlock)successCallbac
     else
         failCallback(@[]);
 }
-RCT_EXPORT_METHOD(broadcast:(NSString *)uuid data:(NSString *)data callback:(nonnull RCTResponseSenderBlock)successCallback failCallback:(nonnull RCTResponseSenderBlock)failCallback)
+RCT_EXPORT_METHOD(startAdvertisingService) //failCallback:(RCTResponseSenderBlock)failCallback)
+{
+    //[self.advtool startAdvertise];
+    //[self.tool startScan];
+    //successCallback(@[]);
+}
+RCT_EXPORT_METHOD(stopAdvertisingService) //failCallback:(RCTResponseSenderBlock)failCallback)
+{
+    //[self.advtool stopAdvertise];
+    //[self.tool stopScan];
+    //successCallback(@[]);
+}
+RCT_EXPORT_METHOD(broadcast:(NSString *)data callback:(nonnull RCTResponseSenderBlock)successCallback failCallback:(nonnull RCTResponseSenderBlock)failCallback)
 {
     //NSLog(@"broadcast id:%@ :data:", broadcastUuid,data);
     //[self setBroadcastUuid:uuid];
@@ -340,23 +350,21 @@ RCT_EXPORT_METHOD(broadcast:(NSString *)uuid data:(NSString *)data callback:(non
 //RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
 RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
 {
-    //NSLog(@"scan with timeout %@", timeoutSeconds);
+    NSLog(@"BleManager.m:scan()");
+    /*
     NSArray * services = [RCTConvert NSArray:serviceUUIDStrings];
     NSMutableArray *serviceUUIDs = [NSMutableArray new];
     NSDictionary *options = nil;
     if (allowDuplicates){
         options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:CBCentralManagerScanOptionAllowDuplicatesKey];
     }
-    
     for (int i = 0; i < [services count]; i++) {
         CBUUID *serviceUUID =[CBUUID UUIDWithString:[serviceUUIDStrings objectAtIndex: i]];
         [serviceUUIDs addObject:serviceUUID];
     }
     [manager scanForPeripheralsWithServices:serviceUUIDs options:options];
-    
-    //dispatch_async(dispatch_get_main_queue(), ^{
-    //    [NSTimer scheduledTimerWithTimeInterval:[timeoutSeconds floatValue] target:self selector:@selector(stopScanTimer:) userInfo: nil repeats:NO];
-    //});
+    */
+    [self.tool startScan];
     successCallback(@[]);
 }
 
@@ -364,20 +372,22 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings allowDuplicates:(BOOL)allow
 RCT_EXPORT_METHOD(stop)
 {
     NSLog(@"Stop scan");
-    [manager stopScan];
+    //[manager stopScan];
+    [self.tool stopScan];
     [self.bridge.eventDispatcher sendAppEventWithName:@"BleManagerStopScan" body:@{}];
     //successCallback(@[]);
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral
-     advertisementData:(NSDictionary *)advertisementData
-                  RSSI:(NSNumber *)RSSI
+     advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI
 {
-    [peripherals addObject:peripheral];
     [peripheral setAdvertisementData:advertisementData RSSI:RSSI];
+    [peripherals setValue:peripheral forKey:[peripheral uuidAsString]];
     
-    //NSLog(@"Discover peripheral: %@", [peripheral name]);
-    [self.bridge.eventDispatcher sendAppEventWithName:@"BleManagerDiscoverPeripheral" body:[peripheral asDictionary]];
+    NSLog(@"BleManager.m:didDiscoverPeripheral: %@", [peripheral name]);
+    [self.bridge.eventDispatcher
+         sendAppEventWithName:@"BleManagerDiscoverPeripheral"
+                         body:[peripheral asDictionary]];
     
 }
 
@@ -765,6 +775,40 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 
 -(NSString *) keyForPeripheral: (CBPeripheral *)peripheral andCharacteristic:(CBCharacteristic *)characteristic {
     return [NSString stringWithFormat:@"%@|%@", [peripheral uuidAsString], [characteristic UUID]];
+}
+
+#pragma mark - STCentralToolDelegate
+- (void)centralTool:(STCentralTool *)centralTool findAPeripheral:(CBPeripheral *)peripheral{
+    //NSLog(@"BleManager.m:findAPeripheral%@",[peripheral name]);
+    //[self.tool selectPeripheral:[peripherals firstObject]];
+    //[peripheral setAdvertisementData:advertisementData RSSI:RSSI];
+    //NSLog(@"Discover peripheral: %@", [peripheral name]);
+    [self.bridge.eventDispatcher sendAppEventWithName:@"BleManagerDiscoverPeripheral" body:[peripheral asDictionary]];
+}
+- (void)centralTool:(STCentralTool *)centralTool connectFailure:(NSError *)error {
+    NSLog(@"连接错误 ---- %@", error);
+}
+
+- (void)centralTool:(STCentralTool *)centralTool connectSuccess:(CBPeripheral *)peripheral {
+    NSLog(@"连接成功 ---- %@", peripheral);
+}
+
+- (void)centralTool:(STCentralTool *)centralTool disconnectPeripheral:(CBPeripheral *)peripheral {
+    NSLog(@"准备断开连接");
+}
+
+- (void)centralTool:(STCentralTool *)centralTool recievedData:(NSData *)data {
+    NSLog(@"收到数据 ---- %@", data);
+}
+
+#pragma mark - STCentralToolOTADelegate
+
+- (void)centralTool:(STCentralTool *)centralTool otaWriteFinishWithError:(NSError *)error {
+    NSLog(@"传输完成，有错吗  ----- %@", error);
+}
+
+- (void)centralTool:(STCentralTool *)centralTool otaWriteLength:(NSInteger)length {
+    NSLog(@"已经传了这么长了啊 ------  %ld", length);
 }
 
 @end

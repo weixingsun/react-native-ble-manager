@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		030F20281D6C2DEF008FCFCD /* STCentralTool.m in Sources */ = {isa = PBXBuildFile; fileRef = 030F20271D6C2DEF008FCFCD /* STCentralTool.m */; };
 		A908F1921CEEFEB500BE1488 /* NSData+Conversion.m in Sources */ = {isa = PBXBuildFile; fileRef = A908F18B1CEEFEB500BE1488 /* NSData+Conversion.m */; };
 		A908F1931CEEFEB500BE1488 /* CBPeripheral+Extensions.m in Sources */ = {isa = PBXBuildFile; fileRef = A908F18D1CEEFEB500BE1488 /* CBPeripheral+Extensions.m */; };
 		A908F1941CEEFEB500BE1488 /* BLECommandContext.m in Sources */ = {isa = PBXBuildFile; fileRef = A908F18F1CEEFEB500BE1488 /* BLECommandContext.m */; };
@@ -26,6 +27,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		030F20261D6C2DEF008FCFCD /* STCentralTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STCentralTool.h; sourceTree = "<group>"; };
+		030F20271D6C2DEF008FCFCD /* STCentralTool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STCentralTool.m; sourceTree = "<group>"; };
 		134814201AA4EA6300B7C361 /* libBleManager.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libBleManager.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A908F18A1CEEFEB500BE1488 /* NSData+Conversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSData+Conversion.h"; sourceTree = "<group>"; };
 		A908F18B1CEEFEB500BE1488 /* NSData+Conversion.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSData+Conversion.m"; sourceTree = "<group>"; };
@@ -67,6 +70,8 @@
 		A908F1891CEEFE0F00BE1488 /* BleManager */ = {
 			isa = PBXGroup;
 			children = (
+				030F20261D6C2DEF008FCFCD /* STCentralTool.h */,
+				030F20271D6C2DEF008FCFCD /* STCentralTool.m */,
 				A908F18A1CEEFEB500BE1488 /* NSData+Conversion.h */,
 				A908F18B1CEEFEB500BE1488 /* NSData+Conversion.m */,
 				A908F18C1CEEFEB500BE1488 /* CBPeripheral+Extensions.h */,
@@ -135,6 +140,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				030F20281D6C2DEF008FCFCD /* STCentralTool.m in Sources */,
 				A908F1931CEEFEB500BE1488 /* CBPeripheral+Extensions.m in Sources */,
 				A908F1951CEEFEB500BE1488 /* BleManager.m in Sources */,
 				A908F1921CEEFEB500BE1488 /* NSData+Conversion.m in Sources */,
@@ -257,7 +263,11 @@
 					"$(SRCROOT)/../node_modules/react-native/React/**",
 				);
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
-				OTHER_LDFLAGS = "-ObjC";
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"$(inherited)",
+				);
 				PRODUCT_NAME = BleManager;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -276,7 +286,10 @@
 					"$(SRCROOT)/../node_modules/react-native/React/**",
 				);
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
-				OTHER_LDFLAGS = "-ObjC";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"$(inherited)",
+				);
 				PRODUCT_NAME = BleManager;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;

@@ -1,6 +1,6 @@
 #import "RCTBridgeModule.h"
 #import <CoreBluetooth/CoreBluetooth.h>
-
+#import "STCentralTool.h"
 
 @interface BleManager : NSObject <RCTBridgeModule, CBCentralManagerDelegate, CBPeripheralDelegate>{
     NSString* discoverPeripherialCallbackId;
@@ -13,10 +13,11 @@
     NSMutableDictionary *connectCallbackLatches;
 }
 
-@property (strong, nonatomic) NSMutableSet *peripherals;
+@property (strong, nonatomic) NSMutableDictionary *peripherals;
 @property (strong, nonatomic) CBCentralManager *manager;
 @property (strong, nonatomic) CBPeripheralManager *peripheralManager;
 @property (strong, nonatomic) NSString *broadcastUuid;
 @property (nonatomic) CBCentralManagerState *state;
+@property (strong, nonatomic) STCentralTool *tool;
 
 @end
