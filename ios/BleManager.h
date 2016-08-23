@@ -17,6 +17,6 @@
 @property (strong, nonatomic) CBCentralManager *manager;
 @property (strong, nonatomic) CBPeripheralManager *peripheralManager;
 @property (strong, nonatomic) NSString *broadcastUuid;
-
+@property (nonatomic) CBCentralManagerState *state;
 
 @end

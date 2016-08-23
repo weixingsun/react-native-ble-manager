@@ -16,6 +16,7 @@ RCT_EXPORT_MODULE();
 
 @synthesize manager;
 @synthesize peripherals;
+@synthesize state;
 
 @synthesize peripheralManager;
   CBMutableCharacteristic *characteristic;
@@ -196,7 +197,25 @@ RCT_EXPORT_MODULE();
     else
         return 0;
 }
-
+RCT_EXPORT_METHOD(isEnabled: (RCTResponseSenderBlock)successCallback
+                                failCallback:(RCTResponseSenderBlock)failCallback)
+{
+    CBCentralManagerState *stateName = [self state];
+    if([self state] == CBCentralManagerStatePoweredOn)
+        successCallback(@[]);
+    else if([self state] == CBCentralManagerStatePoweredOff)
+        failCallback(@[]);
+}
+RCT_EXPORT_METHOD(isAdvertisingSupported: (RCTResponseSenderBlock)successCallback
+                  failCallback:(RCTResponseSenderBlock)failCallback)
+{
+    //NSOperatingSystemVersion ios8 = (NSOperatingSystemVersion){8,0,1};
+    //[[NSProcessInfo processInfo] operatingSystemVersion]
+    if([[[UIDevice currentDevice] systemVersion] floatValue]>7)
+        successCallback(@[]);
+    else
+        failCallback(@[]);
+}
 RCT_EXPORT_METHOD(broadcast:(NSString *)uuid data:(NSString *)data callback:(nonnull RCTResponseSenderBlock)successCallback failCallback:(nonnull RCTResponseSenderBlock)failCallback)
 {
     //NSLog(@"broadcast id:%@ :data:", broadcastUuid,data);
@@ -679,6 +698,7 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central
 {
     NSString *stateName = [self centralManagerStateToString:central.state];
+    [self setState:central.state];
     [self.bridge.eventDispatcher sendAppEventWithName:@"BleManagerDidUpdateState" body:@{@"state":stateName}];
 }
 
