@@ -11,6 +11,7 @@
     NSMutableDictionary *notificationCallbacks;
     NSMutableDictionary *stopNotificationCallbacks;
     NSMutableDictionary *connectCallbackLatches;
+    NSTimer *advTimer;
 }
 
 @property (strong, nonatomic) NSMutableDictionary *peripherals;
@@ -19,5 +20,7 @@
 @property (strong, nonatomic) NSString *broadcastUuid;
 @property (nonatomic) CBCentralManagerState *state;
 @property (strong, nonatomic) STCentralTool *tool;
+
+-(void)timerAction:(NSTimer *)timer;
 
 @end

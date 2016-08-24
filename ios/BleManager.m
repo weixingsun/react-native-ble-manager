@@ -32,9 +32,10 @@ RCT_EXPORT_MODULE();
     
     if (self = [super init]) {
         NSLog(@"BleManager initialized");
-        peripherals = [NSMutableSet set];
+        //peripherals = [NSMutableSet set];
         manager = [[CBCentralManager   alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
         peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
+        //peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:nil options:nil];
         self.tool = [STCentralTool shareInstence];
         self.tool.delegate = self;
         connectCallbacks = [NSMutableDictionary new];
@@ -214,28 +215,42 @@ RCT_EXPORT_METHOD(isAdvertisingSupported: (RCTResponseSenderBlock)successCallbac
     else
         failCallback(@[]);
 }
+
+-(void)timerAction:(NSTimer *)timer
+{
+    //NSLog(@"Hello timer");
+    [self advertise:@"hello"];
+}
 RCT_EXPORT_METHOD(startAdvertisingService) //failCallback:(RCTResponseSenderBlock)failCallback)
 {
-    //[self.advtool startAdvertise];
-    //[self.tool startScan];
+    advTimer = [NSTimer timerWithTimeInterval:1 target:self selector:@selector(timerAction:) userInfo:nil repeats:YES];
+    [[NSRunLoop mainRunLoop]addTimer:advTimer forMode:NSDefaultRunLoopMode];
+    //advTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(timerAction:) userInfo:nil repeats:YES];
+    //NSLog(@"peripheral.startAdvertisingService");
     //successCallback(@[]);
 }
 RCT_EXPORT_METHOD(stopAdvertisingService) //failCallback:(RCTResponseSenderBlock)failCallback)
 {
-    //[self.advtool stopAdvertise];
-    //[self.tool stopScan];
+    [advTimer invalidate];
+    advTimer = nil;
+    NSLog(@"peripheral.stopAdvertisingService");
     //successCallback(@[]);
+
+}
+- (void) advertise:(NSString *)data
+{
+    NSDictionary *advertisingData = @{CBAdvertisementDataServiceUUIDsKey : @[[CBUUID UUIDWithString:[self broadcastUuid]]]};
+    [peripheralManager startAdvertising:advertisingData];
+    //NSLog(@"peripheral.advertise");
 }
 RCT_EXPORT_METHOD(broadcast:(NSString *)data callback:(nonnull RCTResponseSenderBlock)successCallback failCallback:(nonnull RCTResponseSenderBlock)failCallback)
 {
     //NSLog(@"broadcast id:%@ :data:", broadcastUuid,data);
-    //[self setBroadcastUuid:uuid];
-    NSDictionary *advertisingData = @{CBAdvertisementDataServiceUUIDsKey : @[[CBUUID UUIDWithString:[self broadcastUuid]]]};
-    [peripheralManager startAdvertising:advertisingData];
+    [self advertise:@"broadcast:data"];
     successCallback(@[]);
 }
 - (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheral{
-    NSLog(@"peripheralManagerDidUpdateState");
+    //NSLog(@"peripheralManagerDidUpdateState");
     switch (peripheral.state) {
         case CBPeripheralManagerStatePoweredOn:{
             CBUUID *cUDID = [CBUUID UUIDWithString:@"DA18"];
@@ -351,7 +366,7 @@ RCT_EXPORT_METHOD(broadcast:(NSString *)data callback:(nonnull RCTResponseSender
 RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings allowDuplicates:(BOOL)allowDuplicates callback:(nonnull RCTResponseSenderBlock)successCallback)
 {
     NSLog(@"BleManager.m:scan()");
-    /*
+
     NSArray * services = [RCTConvert NSArray:serviceUUIDStrings];
     NSMutableArray *serviceUUIDs = [NSMutableArray new];
     NSDictionary *options = nil;
@@ -362,9 +377,9 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings allowDuplicates:(BOOL)allow
         CBUUID *serviceUUID =[CBUUID UUIDWithString:[serviceUUIDStrings objectAtIndex: i]];
         [serviceUUIDs addObject:serviceUUID];
     }
-    [manager scanForPeripheralsWithServices:serviceUUIDs options:options];
-    */
-    [self.tool startScan];
+    //[manager scanForPeripheralsWithServices:serviceUUIDs options:options];
+
+    [self.tool startScan :serviceUUIDStrings];
     successCallback(@[]);
 }
 
@@ -810,5 +825,6 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 - (void)centralTool:(STCentralTool *)centralTool otaWriteLength:(NSInteger)length {
     NSLog(@"已经传了这么长了啊 ------  %ld", length);
 }
+
 
 @end

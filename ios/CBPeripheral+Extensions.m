@@ -85,7 +85,7 @@ static char ADVERTISEMENT_RSSI_IDENTIFER;
               unsigned mfgid = 0;
               [[NSScanner scannerWithString:mfgStringId] scanHexInt:&mfgid];
               NSString *data = [rawMfg substringWithRange:NSMakeRange(4, [rawMfg length]-4)];
-              NSLog(@"mfg_id: %@ data: %@", mfgStringId,data);
+              //NSLog(@"mfg_id: %@ data: %@", mfgStringId,data);
               [mfg_dict setValue:data forKey:@"data"];
               [mfg_dict setValue:[NSNumber numberWithInt:mfgid] forKey:@"id"];
           }

@@ -29,6 +29,7 @@
 /* Begin PBXFileReference section */
 		030F20261D6C2DEF008FCFCD /* STCentralTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STCentralTool.h; sourceTree = "<group>"; };
 		030F20271D6C2DEF008FCFCD /* STCentralTool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STCentralTool.m; sourceTree = "<group>"; };
+		0331C91D1D6D376F00B0E400 /* STPeripheral.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = STPeripheral.h; sourceTree = "<group>"; };
 		134814201AA4EA6300B7C361 /* libBleManager.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libBleManager.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A908F18A1CEEFEB500BE1488 /* NSData+Conversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSData+Conversion.h"; sourceTree = "<group>"; };
 		A908F18B1CEEFEB500BE1488 /* NSData+Conversion.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSData+Conversion.m"; sourceTree = "<group>"; };
@@ -80,6 +81,7 @@
 				A908F18F1CEEFEB500BE1488 /* BLECommandContext.m */,
 				A908F1901CEEFEB500BE1488 /* BleManager.h */,
 				A908F1911CEEFEB500BE1488 /* BleManager.m */,
+				0331C91D1D6D376F00B0E400 /* STPeripheral.h */,
 			);
 			name = BleManager;
 			sourceTree = "<group>";

@@ -14,7 +14,6 @@
 @interface STCentralTool () <CBCentralManagerDelegate, CBPeripheralDelegate>
 
 @property (strong, nonatomic) CBCentralManager *centralManager;
-@property (strong, nonatomic) CBPeripheralManager *peripheralManager;
 
 @property (strong, nonatomic) NSMutableDictionary *discoveredPeripherals; // 找到的所有的 Peripheral
 @property (strong, nonatomic) CBPeripheral *connectedPeripheral; // 当前已经连接的 Peripheral
@@ -22,7 +21,6 @@
 @property (strong, nonatomic) NSMutableArray *readCharacteristics; ///< 连接的所有 characteristic，主要用于断开连接时，取消 notify 监听
 
 @property (strong, nonatomic) NSTimer *timeoutTimer;
-@property (strong, nonatomic) NSTimer *advertiseTimer;
 
 @property (copy, nonatomic) NSArray *serviceUUIDArray; ///< 将允许搜索的 service UUID 打包为数组 CBUUID 类型
 @property (copy, nonatomic) NSArray *characteristicUUIDArray; ///< 将允许搜索的 characteristic UUID 打包为数组 CBUUID 类型
@@ -74,7 +72,7 @@ NSString *range;
     self = [super init];
     if (self) {
         self.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil options:nil];
-        self.peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:nil options:nil];
+        
         // 如果设置了自动连接
         if (STCentralToolAutoConnect) {
             // 这里需要延迟 0.1s 才能走连接成功的代理，具体原因未知
@@ -82,40 +80,42 @@ NSString *range;
                 [self autoConnect];
             });
         }
-        [self setBroadcastUuid:[[NSUUID UUID] UUIDString]];
+        //[self setBroadcastUuid:[[NSUUID UUID] UUIDString]];
     }
     return self;
 }
 
 #pragma mark - Public Methods
 
-- (void)startScan {
+- (void)startScan:(NSArray *)serviceUUIDs {
     [self.discoveredPeripherals removeAllObjects];
     //[self.centralManager scanForPeripheralsWithServices:self.serviceUUIDArray options:nil];
     NSDictionary *options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:CBCentralManagerScanOptionAllowDuplicatesKey];
-    NSMutableArray *serviceUUIDs = [NSMutableArray new];
-    [self.centralManager scanForPeripheralsWithServices:serviceUUIDs options:options];
-    [self startTimer];
+    //NSMutableArray *serviceUUIDs = [NSMutableArray new];
+    [self.centralManager scanForPeripheralsWithServices:serviceUUIDs options:nil];
+    //[self startTimer];
 }
 
 - (void)stopScan {
     [self.centralManager stopScan];
 }
+/*
 - (void)startAdvertise {
     //[self.discoveredPeripherals removeAllObjects];
     //[self.centralManager scanForPeripheralsWithServices:self.serviceUUIDArray options:nil];
     NSDictionary *advertisingData = @{CBAdvertisementDataServiceUUIDsKey: @[[CBUUID UUIDWithString:[self broadcastUuid]]]};
     [self.peripheralManager startAdvertising:advertisingData];
-    [self startTimer];
+    
 }
 
 - (void)stopAdvertise {
     [self.peripheralManager stopAdvertising];
 }
+*/
 - (void)selectPeripheral:(CBPeripheral *)peripheral {
     [self.centralManager connectPeripheral:peripheral options:nil];
     [self stopScan];
-    [self startTimer];
+    //[self startTimer];
 }
 
 - (void)sendData:(NSData *)data toCharacteristic:(CBCharacteristic *)toCharacteristic {
@@ -184,13 +184,13 @@ NSString *range;
     [self.centralManager connectPeripheral:peripheral options:nil];
     // 注意保留 Peripheral 的引用
     self.lastConnectedPeripheral = peripheral;
-    [self startTimer];
+    //[self startTimer];
 }
 
 #pragma mark - Timer
 
 - (void)startTimer {
-    [self stopTimer];
+    //[self stopTimer];
     if (STCentralToolTimeOut <= 0) {
         return;
     }
@@ -240,7 +240,7 @@ NSString *range;
 
 // 找到设备时调用，每找到一个就调用一次
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary<NSString *,id> *)advertisementData RSSI:(NSNumber *)RSSI {
-    [self stopTimer];
+    //[self stopTimer];
     //NSLog(@"STCentralTool.m:didDiscoverPeripheral: %@", [peripheral name]);
     [peripheral setAdvertisementData:advertisementData RSSI:RSSI];
     // 将找到的 peripheral 存入数组
@@ -255,7 +255,7 @@ NSString *range;
 
 // 成功连接到某个设备
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
-    [self stopTimer];
+    //[self stopTimer];
     peripheral.delegate = self;
     self.connectedPeripheral = peripheral;
     [peripheral discoverServices:self.serviceUUIDArray];
@@ -445,117 +445,4 @@ NSString *range;
     return self.connectedPeripheral.state == CBPeripheralStateConnected;
 }
 ///////////////////////////////////////////////////////////////////////////////
-- (void)peripheralManagerDidUpdateState:(CBPeripheralManager *)peripheral{
-    NSLog(@"peripheralManagerDidUpdateState");
-    switch (peripheral.state) {
-        case CBPeripheralManagerStatePoweredOn:{
-            CBUUID *cUDID = [CBUUID UUIDWithString:@"DA18"];
-            CBUUID *cUDID1 = [CBUUID UUIDWithString:@"DA17"];
-            CBUUID *cUDID2 = [CBUUID UUIDWithString:@"DA16"];
-            NSString *broadcastUuid = [[NSUUID UUID] UUIDString];
-            [self setBroadcastUuid:broadcastUuid];
-            CBUUID *sUDID = [CBUUID UUIDWithString:[self broadcastUuid]];
-            characteristic = [[CBMutableCharacteristic alloc]initWithType:cUDID properties:CBCharacteristicPropertyNotify value:nil permissions:CBAttributePermissionsReadable];
-            characteristic1 = [[CBMutableCharacteristic alloc]initWithType:cUDID1 properties:CBCharacteristicPropertyWrite value:nil permissions:CBAttributePermissionsWriteable];
-            characteristic2 = [[CBMutableCharacteristic alloc]initWithType:cUDID2 properties:CBCharacteristicPropertyRead value:nil permissions:CBAttributePermissionsReadable];
-            //NSLog(@"%u",characteristic2.properties);
-            servicea = [[CBMutableService alloc]initWithType:sUDID primary:YES];
-            servicea.characteristics = @[characteristic,characteristic1,characteristic2];
-            [peripheral addService:servicea];
-        }
-            break;
-
-        default:
-            NSLog(@"%i",peripheral.state);
-            break;
-    }
-}
-- (void)peripheralManager:(CBPeripheralManager *)peripheral didAddService:(CBService *)service error:(NSError *)error{
-    NSLog(@"Added");
-    NSDictionary *advertisingData = @{CBAdvertisementDataLocalNameKey : [[UIDevice currentDevice] name], CBAdvertisementDataServiceUUIDsKey : @[[CBUUID UUIDWithString:[self broadcastUuid]]]};
-
-    [peripheral startAdvertising:advertisingData];
-}
-
-- (void)peripheralManagerDidStartAdvertising:(CBPeripheralManager *)peripheral error:(NSError *)error{
-    NSLog(@"peripheralManagerDidStartAdvertising");
-}
-
-- (void)peripheralManager:(CBPeripheralManager *)peripheral central:(CBCentral *)central didSubscribeToCharacteristic:(CBCharacteristic *)characteristic12{
-    NSLog(@"Connected Core:%@",characteristic12.UUID);
-    [self writeData:peripheral];
-}
-
-- (void)writeData:(CBPeripheralManager *)peripheral{
-    NSDictionary *dict = @{ @"NAME" : @"Weixing Sun",@"EMAIL":@"weixing.sun@gmail.com" };
-    mainData = [NSJSONSerialization dataWithJSONObject:dict options:kNilOptions error:nil];
-    while ([self hasData]) {
-        if([peripheral updateValue:[self getNextData] forCharacteristic:characteristic onSubscribedCentrals:nil]){
-            [self ridData];
-        }else{
-            return;
-        }
-    }
-    NSString *stra = @"ENDAL";
-    NSData *dataa = [stra dataUsingEncoding:NSUTF8StringEncoding];
-    [peripheral updateValue:dataa forCharacteristic:characteristic onSubscribedCentrals:nil];
-}
-- (void)peripheralManagerIsReadyToUpdateSubscribers:(CBPeripheralManager *)peripheral{
-    while ([self hasData]) {
-        if([peripheral updateValue:[self getNextData] forCharacteristic:characteristic onSubscribedCentrals:nil]){
-            [self ridData];
-        }else{
-            return;
-        }
-    }
-    NSString *stra = @"ENDAL";
-    NSData *dataa = [stra dataUsingEncoding:NSUTF8StringEncoding];
-    [peripheral updateValue:dataa forCharacteristic:characteristic onSubscribedCentrals:nil];
-}
-- (BOOL)hasData{
-    if ([mainData length]>0) {
-        return YES;
-    }else{
-        return NO;
-    }
-}
-
-- (void)ridData{
-    if ([mainData length]>19) {
-        mainData = [mainData subdataWithRange:NSRangeFromString(range)];
-    }else{
-        mainData = nil;
-    }
-}
-
-- (NSData *)getNextData
-{
-    NSData *data;
-    if ([mainData length]>19) {
-        int datarest = [mainData length]-20;
-        data = [mainData subdataWithRange:NSRangeFromString(@"{0,20}")];
-        range = [NSString stringWithFormat:@"{20,%i}",datarest];
-    }else{
-        int datarest = [mainData length];
-        range = [NSString stringWithFormat:@"{0,%i}",datarest];
-        data = [mainData subdataWithRange:NSRangeFromString(range)];
-    }
-    return data;
-}
-- (void)peripheralManager:(CBPeripheralManager *)peripheral didReceiveReadRequest:(CBATTRequest *)request{
-    NSString *mainString = [NSString stringWithFormat:@"GN123"];
-    NSData *cmainData= [mainString dataUsingEncoding:NSUTF8StringEncoding];
-    request.value = cmainData;
-    [peripheral respondToRequest:request withResult:CBATTErrorSuccess];
-}
-
-- (void)peripheralManager:(CBPeripheralManager *)peripheral didReceiveWriteRequests:(NSArray *)requests{
-    for (CBATTRequest *aReq in requests){
-        //NSLog(@"%@",[[NSString alloc]initWithData:aReq.value encoding:NSUTF8StringEncoding]);
-        //Log.text = [Log.text stringByAppendingString:[[NSString alloc]initWithData:aReq.value encoding:NSUTF8StringEncoding]];
-        //Log.text = [Log.text stringByAppendingString:@"\n"];
-        [peripheral respondToRequest:aReq withResult:CBATTErrorSuccess];
-    }
-}
-
 @end
