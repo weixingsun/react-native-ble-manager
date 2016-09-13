@@ -39,7 +39,8 @@ class BleManager extends ReactContextBaseJavaModule {
 	public BleManager(ReactApplicationContext reactContext) {
 		super(reactContext);
 		context = reactContext;
-                scanner = getBluetoothAdapter().getBluetoothLeScanner();
+                bluetoothAdapter = getBluetoothAdapter();
+                scanner = bluetoothAdapter.getBluetoothLeScanner();
                 //advertiser = BluetoothAdapter.getDefaultAdapter().getBluetoothLeAdvertiser();
                 //advertiser = getBluetoothAdapter().getBluetoothLeAdvertiser();
                 //Log.e(LOG_TAG, "BLE.isMultipleAdvertisementSupported:"+BluetoothAdapter.getDefaultAdapter().isMultipleAdvertisementSupported());
@@ -74,7 +75,12 @@ class BleManager extends ReactContextBaseJavaModule {
         }
         @ReactMethod
         public void isEnabled(Callback successCallback,Callback failCallback){
-            boolean enabled = getBluetoothAdapter().isEnabled();
+            boolean enabled = true;
+            if(getBluetoothAdapter()==null){ 
+                enabled = false;
+            }else{
+                enabled = getBluetoothAdapter().isEnabled();
+            }
             if(enabled) successCallback.invoke(enabled);
             else failCallback.invoke(enabled);
         }
@@ -137,10 +143,12 @@ class BleManager extends ReactContextBaseJavaModule {
 	@ReactMethod
 	public void scan(ReadableArray serviceUUIDs, boolean allowDuplicates, Callback successCallback) {
 		Log.d(LOG_TAG, "scan");
+                if (getBluetoothAdapter()==null) return;
 		if (!getBluetoothAdapter().isEnabled()){
                     Log.e(LOG_TAG, "BLE disabled");
                     return;
                 }
+                scanner = getBluetoothAdapter().getBluetoothLeScanner();
 		for (Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
 			Map.Entry<String, Peripheral> entry = iterator.next();
 			if (!entry.getValue().isConnected()) {
