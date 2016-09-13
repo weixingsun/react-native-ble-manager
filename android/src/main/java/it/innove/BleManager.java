@@ -29,7 +29,7 @@ class BleManager extends ReactContextBaseJavaModule {
 	private BluetoothAdapter bluetoothAdapter;
 	private Context context;
 	private ReactContext reactContext;
-        private BluetoothLeScanner scanner;
+        //private BluetoothLeScanner scanner;
         //private BluetoothLeAdvertiser advertiser;
         //private AdvertiseSettings advSettings;
 	// key is the MAC Address
@@ -40,7 +40,7 @@ class BleManager extends ReactContextBaseJavaModule {
 		super(reactContext);
 		context = reactContext;
                 bluetoothAdapter = getBluetoothAdapter();
-                scanner = bluetoothAdapter.getBluetoothLeScanner();
+                //scanner = bluetoothAdapter.getBluetoothLeScanner();
                 //advertiser = BluetoothAdapter.getDefaultAdapter().getBluetoothLeAdvertiser();
                 //advertiser = getBluetoothAdapter().getBluetoothLeAdvertiser();
                 //Log.e(LOG_TAG, "BLE.isMultipleAdvertisementSupported:"+BluetoothAdapter.getDefaultAdapter().isMultipleAdvertisementSupported());
@@ -86,7 +86,11 @@ class BleManager extends ReactContextBaseJavaModule {
         }
         @ReactMethod
         public void isAdvertisingSupported(Callback successCallback, Callback failCallback){
-            boolean supported = getBluetoothAdapter().isMultipleAdvertisementSupported();
+            boolean supported = true;
+            if(getBluetoothAdapter()==null){
+                supported = false;
+            }
+            supported = getBluetoothAdapter().isMultipleAdvertisementSupported();
             if(supported) successCallback.invoke(supported);
             else failCallback.invoke(supported);
         }
@@ -148,7 +152,7 @@ class BleManager extends ReactContextBaseJavaModule {
                     Log.e(LOG_TAG, "BLE disabled");
                     return;
                 }
-                scanner = getBluetoothAdapter().getBluetoothLeScanner();
+                BluetoothLeScanner scanner = getBluetoothAdapter().getBluetoothLeScanner();
 		for (Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
 			Map.Entry<String, Peripheral> entry = iterator.next();
 			if (!entry.getValue().isConnected()) {
@@ -218,7 +222,8 @@ class BleManager extends ReactContextBaseJavaModule {
             if (Build.VERSION.SDK_INT < LOLLIPOP) {
                 getBluetoothAdapter().stopLeScan(mLeScanCallback);
             }else{
-                scanner.stopScan(scanCallback);
+                getBluetoothAdapter().getBluetoothLeScanner().stopScan(scanCallback);
+                //scanner.stopScan(scanCallback);
             }
             WritableMap map = Arguments.createMap();
             sendEvent("BleManagerStopScan", map);
